@@ -79,10 +79,27 @@ $ git submodule update --init third-party/build-deps
 $ git -C third-party/build-deps log -1   # the pinned commit
 ```
 
+The download is wired the way upstream expects it: `nix/package.nix`
+symlinks the fixed-output derivation into
+`third-party/build-deps/dist/<system>-<arch>` in `postPatch` — that is
+where the *default* ffmpeg logic of `cmake/dependencies/common.cmake`
+looks for it, and that default branch is the one that links the full
+static set (`libx264`/`libx265`/`libSvtAv1Enc`/`hdr10plus`). The
+`FFMPEG_PREPARED_BINARIES` cmake option is deliberately *not* set: that
+branch drops the codec libraries from the link line.
+
+The bundle's bundled `ffnvcodec` headers (newer NVENC API than Apollo's
+NVENC code asserts) are repointed at the source tree's own pinned
+`third-party/nv-codec-headers` headers.
+
 The hashes currently mirror nixpkgs' `sunshine` package (same
 `v2026.910.121303` tag). When bumping: check which tag matches the new
 submodule pin, update `buildDepsTag`, and do the same
 fake-hash/failure/got-hash dance for `ffmpegPrebuilt.hash` per platform.
+If the new bundle's NVENC API diverges from Apollo's pinned
+nv-codec-headers, the build asserts it at compile time (that is the
+correct place to catch it — bump the submodule pin in the source tree
+first).
 
 ### Version
 

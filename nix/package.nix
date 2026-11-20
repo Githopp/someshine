@@ -88,11 +88,13 @@ let
   # Upstream's cmake links pre-built static FFmpeg libraries from the
   # LizardByte/build-deps release artifacts at configure time; we can't do
   # network I/O in the build sandbox, so fetch the archive with a
-  # fixed-output derivation and point cmake at it via FFMPEG_PREPARED_BINARIES.
+  # fixed-output derivation and symlink it into
+  # third-party/build-deps/dist/<system>-<arch> in postPatch — the default
+  # ffmpeg logic of cmake/dependencies/common.cmake picks it up there and
+  # links the full static set (libx264/libx265/libSvtAv1Enc/hdr10plus).
   # The tag must embed a compatible ffmpeg for the Apollo code being built;
-  # the (newer) ffnvcodec headers bundled with it are stripped below in
-  # favor of the source tree's own pinned nv-codec-headers (see
-  # nix/README.md).
+  # the (newer) ffnvcodec headers bundled with it are repointed at the
+  # source tree's own pinned nv-codec-headers (see nix/README.md).
   buildDepsTag = "v2026.910.121303";
   ffmpegArch =
     {
