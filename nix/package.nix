@@ -18,6 +18,7 @@
   lib,
   stdenv,
   fetchzip,
+  runCommand,
   buildNpmPackage,
   autoPatchelfHook,
   autoAddDriverRunpath,
@@ -88,8 +89,10 @@ let
   # LizardByte/build-deps release artifacts at configure time; we can't do
   # network I/O in the build sandbox, so fetch the archive with a
   # fixed-output derivation and point cmake at it via FFMPEG_PREPARED_BINARIES.
-  # The tag must match the third-party/build-deps submodule pin of the
-  # Apollo source being built (see nix/README.md).
+  # The tag must embed a compatible ffmpeg for the Apollo code being built;
+  # the (newer) ffnvcodec headers bundled with it are stripped below in
+  # favor of the source tree's own pinned nv-codec-headers (see
+  # nix/README.md).
   buildDepsTag = "v2026.910.121303";
   ffmpegArch =
     {
@@ -107,6 +110,22 @@ let
       }
       .${stdenv.hostPlatform.system};
   };
+
+  # Apollo's NVENC code asserts an *exact* NVENC API version and pins the
+  # matching headers in third-party/nv-codec-headers; the ffmpeg bundle
+  # ships its own (usually newer) copy of the ffnvcodec headers that would
+  # win the include-path race and break that check. Repoint the bundle's
+  # ffnvcodec at the source tree's pinned headers instead.
+  ffmpegPrepared = runCommand "ffmpeg-prepared-binaries" { } ''
+    mkdir -p "$out"
+    cp -a "${ffmpegPrebuilt}"/. "$out"/
+    # cp -a preserves the read-only modes of the store source; re-enable
+    # writing so the headers can be replaced
+    chmod -R u+w "$out"
+    rm -rf "$out"/include/ffnvcodec
+    ln -s "${srcWithSubmodules}"/third-party/nv-codec-headers/include/ffnvcodec \
+      "$out"/include/ffnvcodec
+  '';
 
   # Flakes fetched as tarballs (the `github:` fetcher) do not contain git
   # submodule content; fail early with instructions instead of letting the
@@ -265,8 +284,9 @@ stdenv'.mkDerivation (finalAttrs: {
     (lib.cmakeFeature "SUNSHINE_PUBLISHER_NAME" "nix")
     (lib.cmakeFeature "SUNSHINE_PUBLISHER_WEBSITE" "https://github.com/Githopp/Apollo")
     (lib.cmakeFeature "SUNSHINE_PUBLISHER_ISSUE_URL" "https://github.com/Githopp/Apollo/issues")
-    # avoid cmake's network download of the LizardByte/build-deps ffmpeg tarball
-    (lib.cmakeFeature "FFMPEG_PREPARED_BINARIES" "${ffmpegPrebuilt}")
+    # avoid cmake's network download of the LizardByte/build-deps ffmpeg
+    # tarball; ffmpegPrepared = bundle minus its ffnvcodec headers
+    (lib.cmakeFeature "FFMPEG_PREPARED_BINARIES" "${ffmpegPrepared}")
     # we provide Jinja2/setuptools via python3.withPackages; don't pip-install
     (lib.cmakeBool "GLAD_SKIP_PIP_INSTALL" true)
     # upstream tries to use systemd and udev packages to find these
