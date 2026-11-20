@@ -194,6 +194,17 @@ stdenv'.mkDerivation (finalAttrs: {
 
       substituteInPlace packaging/linux/sunshine.service.in \
         --replace-fail '/bin/sleep' '${lib.getExe' coreutils "sleep"}'
+    ''
+    # Put the prebuilt ffmpeg where the default (not overriden) ffmpeg logic
+    # of cmake/dependencies/common.cmake looks for it:
+    # ${CMAKE_SOURCE_DIR}/third-party/build-deps/dist/<system>-<arch>.
+    # We deliberately do NOT set FFMPEG_PREPARED_BINARIES: upstream only
+    # links the full static lib set (libx264/libx265/libSvtAv1Enc/hdr10plus)
+    # in the default branch, and that is exactly what we need against a
+    # bundle built by the same repo.
+    + lib.optionalString stdenv.hostPlatform.isLinux ''
+      mkdir -p third-party/build-deps/dist
+      ln -sfn "${ffmpegPrepared}" "third-party/build-deps/dist/${ffmpegArch}"
     '';
 
   nativeBuildInputs = [
@@ -284,9 +295,6 @@ stdenv'.mkDerivation (finalAttrs: {
     (lib.cmakeFeature "SUNSHINE_PUBLISHER_NAME" "nix")
     (lib.cmakeFeature "SUNSHINE_PUBLISHER_WEBSITE" "https://github.com/Githopp/Apollo")
     (lib.cmakeFeature "SUNSHINE_PUBLISHER_ISSUE_URL" "https://github.com/Githopp/Apollo/issues")
-    # avoid cmake's network download of the LizardByte/build-deps ffmpeg
-    # tarball; ffmpegPrepared = bundle minus its ffnvcodec headers
-    (lib.cmakeFeature "FFMPEG_PREPARED_BINARIES" "${ffmpegPrepared}")
     # we provide Jinja2/setuptools via python3.withPackages; don't pip-install
     (lib.cmakeBool "GLAD_SKIP_PIP_INSTALL" true)
     # upstream tries to use systemd and udev packages to find these
