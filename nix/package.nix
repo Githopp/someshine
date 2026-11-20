@@ -133,7 +133,7 @@ stdenv'.mkDerivation (finalAttrs: {
   ui = buildNpmPackage {
     inherit (finalAttrs) src version;
     pname = "apollo-ui";
-    npmDepsHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+    npmDepsHash = "sha256-hfv8R1qajd+7eqQIP3mEkvIj1dpr6RO85OuNGUNCYtE=";
     installPhase = ''
       runHook preInstall
 
