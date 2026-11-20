@@ -64,9 +64,10 @@
   pipewire,
   libnotify,
   libayatana-appindicator,
-  # glib-2.0.pc in nixpkgs Requires sysprof-capture-4; without it
-  # pkg-config can't resolve ayatana-appindicator3-0.1
-  sysprof,
+  gtk3,
+  # glib-2.0.pc in nixpkgs Requires sysprof-capture-4; the capture library
+  # was split out of `sysprof` into its own package
+  libsysprof-capture,
   miniupnpc,
   nlohmann_json,
   coreutils,
@@ -236,10 +237,12 @@ stdenv'.mkDerivation (finalAttrs: {
     vulkan-loader
     pipewire
     # tray icon support: cmake requires both a (ayatana-)appindicator
-    # module and libnotify
+    # module and libnotify; the ayatana chain also needs gtk+3 and,
+    # transitively via glib-2.0.pc, sysprof-capture-4
     libayatana-appindicator
+    gtk3
     libnotify
-    sysprof
+    libsysprof-capture
   ]
   ++ lib.optionals cudaSupport [
     cudaPackages.cuda_cudart
