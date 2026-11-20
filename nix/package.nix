@@ -64,6 +64,9 @@
   pipewire,
   libnotify,
   libayatana-appindicator,
+  # glib-2.0.pc in nixpkgs Requires sysprof-capture-4; without it
+  # pkg-config can't resolve ayatana-appindicator3-0.1
+  sysprof,
   miniupnpc,
   nlohmann_json,
   coreutils,
@@ -232,11 +235,11 @@ stdenv'.mkDerivation (finalAttrs: {
     svt-av1
     vulkan-loader
     pipewire
-    # tray icon support (cmake prefers ayatana-appindicator3, falls back to
-    # appindicator3, and only hard-fails if neither is found and libnotify
-    # is absent; provide both so the tray is actually built)
+    # tray icon support: cmake requires both a (ayatana-)appindicator
+    # module and libnotify
     libayatana-appindicator
     libnotify
+    sysprof
   ]
   ++ lib.optionals cudaSupport [
     cudaPackages.cuda_cudart
